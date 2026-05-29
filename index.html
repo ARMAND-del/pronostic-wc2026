@@ -169,14 +169,25 @@ function allM(){
   return[...MATCHS,...(DB.extraMatchs||[])].sort((a,b)=>new Date(a.k||'9999')-new Date(b.k||'9999'));
 }
 
+const SB_URL='https://ovjmpblktqxqgbqiaual.supabase.co';
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im92am1wYmxrdHF4cWdicWlhdWFsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYwMzY5OTIsImV4cCI6MjA2MTYxMjk5Mn0.o_IG-5d8EpBTYhAc3WpRLMwP9XFgKR8i6T_FGmFGGVQ';
+async function sbFetch(method,path,body){
+  const r=await fetch(SB_URL+path,{method,headers:{'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Prefer':'return=representation'},body:body?JSON.stringify(body):undefined});
+  return r.ok?r.json():null;
+}
 async function dbLoad(){
-  await Promise.all(['users','pronos','results','extraMatchs','prevRanks'].map(async k=>{
-    try{const r=await window.storage.get('db_'+k,true);if(r&&r.value)DB[k]=JSON.parse(r.value);}catch(e){}
-  }));
+  try{
+    const rows=await sbFetch('GET','/rest/v1/data?select=id,content');
+    if(rows&&rows.length){rows.forEach(r=>{if(DB.hasOwnProperty(r.id))DB[r.id]=r.content;});}
+  }catch(e){console.error('dbLoad error',e);}
   if(!DB.extraMatchs)DB.extraMatchs=[];
   if(!DB.prevRanks)DB.prevRanks={};
 }
-async function dbSave(k){try{await window.storage.set('db_'+k,JSON.stringify(DB[k]),true);}catch(e){}}
+async function dbSave(k){
+  try{
+    await fetch(SB_URL+'/rest/v1/data',{method:'POST',headers:{'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({id:k,content:DB[k]})});
+  }catch(e){console.error('dbSave error',e);}
+}
 
 function sessGet(){try{return localStorage.getItem(SK);}catch(e){return null;}}
 function sessSave(n){try{localStorage.setItem(SK,n);}catch(e){}}
