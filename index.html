@@ -170,7 +170,7 @@ function allM(){
 }
 
 const SB_URL='https://ovjmpblktqxqgbqiaual.supabase.co';
-const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im92am1wYmxrdHF4cWdicWlhdWFsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYwMzY5OTIsImV4cCI6MjA2MTYxMjk5Mn0.o_IG-5d8EpBTYhAc3WpRLMwP9XFgKR8i6T_FGmFGGVQ';
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im92am1wYmxrdHF4cWdicWlhdWFsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDUxNjgsImV4cCI6MjA5NTYyMTE2OH0.aw3-zMfgbgEYdJ9LbxnHcnVS4dw5rp9YWA0Gkzqa8Mo';
 async function sbFetch(method,path,body){
   const r=await fetch(SB_URL+path,{method,headers:{'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Prefer':'return=representation'},body:body?JSON.stringify(body):undefined});
   return r.ok?r.json():null;
