@@ -363,17 +363,19 @@ function showPlayer(){
       <div class="stat"><div class="sv" id="st3" style="color:var(--blue);">${played.length?bn:ms.length}</div><div class="sl">${played.length?'Bons':'Total matchs'}</div></div>
     </div>
     <div class="tabs">
-      <button class="tb ${ptab==='p'?'on':''}" onclick="setPTab('p')">⚽ Pronostics</button>
+      <button class="tb ${ptab==='p'?'on':''}" onclick="setPTab('p')">⚽ Pronos</button>
       <button class="tb ${ptab==='s'?'on':''}" onclick="setPTab('s')">📊 Scores</button>
-      <button class="tb ${ptab==='c'?'on':''}" onclick="setPTab('c')">🏆 Classement</button>
+      <button class="tb ${ptab==='g'?'on':''}" onclick="setPTab('g')">👥 Groupe</button>
+      <button class="tb ${ptab==='c'?'on':''}" onclick="setPTab('c')">🏆 Class.</button>
     </div>
     <div id="tp-p" class="tp ${ptab==='p'?'on':''}">${buildPronos()}</div>
     <div id="tp-s" class="tp ${ptab==='s'?'on':''}">${buildScores()}</div>
+    <div id="tp-g" class="tp ${ptab==='g'?'on':''}">${buildGroupe()}</div>
     <div id="tp-c" class="tp ${ptab==='c'?'on':''}">${renderClass()}</div>
   </div>`);
   startLive();
 }
-function setPTab(t){ptab=t;['p','s','c'].forEach((x,i)=>{document.querySelectorAll('.tb')[i].classList.toggle('on',x===t);document.getElementById('tp-'+x).classList.toggle('on',x===t);});}
+function setPTab(t){ptab=t;['p','s','g','c'].forEach((x,i)=>{document.querySelectorAll('.tb')[i].classList.toggle('on',x===t);document.getElementById('tp-'+x).classList.toggle('on',x===t);});if(t==='g')document.getElementById('tp-g').innerHTML=buildGroupe();}
 
 function buildPronos(){
   const ms=allM();const mp=DB.pronos[ME]||{};
@@ -446,6 +448,58 @@ function buildScores(){
       <div style="font-size:12px;color:var(--text2);">${pr?`Mon prono : <strong>${pr.s1}–${pr.s2}</strong>`:'<em style="color:var(--red);">Non saisi</em>'}</div></div>
       ${ptsB(v)}
     </div>`;
+  });
+  return h;
+}
+
+function buildGroupe(){
+  const ms=allM();
+  const pl=Object.keys(DB.users).filter(p=>p!==ME);
+  if(!pl.length)return'<div style="text-align:center;padding:30px;color:var(--text3);">Aucun autre participant encore</div>';
+  let h=`<div style="font-size:15px;font-weight:800;margin-bottom:12px;">👥 Les participants (${Object.keys(DB.users).length})</div>`;
+  // Liste des participants
+  h+=`<div class="rc" style="margin-bottom:16px;">${Object.keys(DB.users).map(p=>{
+    const isMe=p===ME;
+    const done=Object.keys(DB.pronos[p]||{}).length;
+    const tot=ms.length;
+    const pct=tot?Math.round(done/tot*100):0;
+    return`<div class="rr ${isMe?'me':''}">
+      <div class="av">${ini(p)}</div>
+      <div style="flex:1;margin-left:8px;"><div style="font-size:14px;font-weight:600;">${p}${isMe?' <span class="bdg bg" style="font-size:10px;">Moi</span>':''}</div>
+      <div style="font-size:11px;color:var(--text3);">${done}/${tot} pronostics saisis</div></div>
+      <span class="bdg ${pct===100?'bg':pct>50?'bb':'bo'}">${pct}%</span>
+    </div>`;
+  }).join('')}</div>`;
+  // Pronos par match (visibles seulement si match commencé)
+  h+=`<div style="font-size:15px;font-weight:800;margin-bottom:12px;">⚽ Pronostics par match</div>`;
+  let lastDay='';
+  ms.forEach(m=>{
+    const dk=dayKey(m.k);
+    if(dk!==lastDay){lastDay=dk;h+=`<div class="date-sep">📅 ${fmtDay(m.k)}</div>`;}
+    const lk=lkd(m);
+    const r=DB.results[m.id];
+    const nb=Object.keys(DB.users).filter(p=>(DB.pronos[p]||{})[m.id]).length;
+    const tot=Object.keys(DB.users).length;
+    h+=`<div class="mc"><div class="mh">
+      <div style="display:flex;align-items:center;gap:5px;">${phBdg(m.g)}<span style="font-size:12px;font-weight:700;">${m.d}</span>${lk?'<span class="bdg bo" style="font-size:9px;">🔒</span>':''}</div>
+      <span style="font-size:11px;color:var(--text3);">👥${nb}/${tot}</span>
+    </div>
+    <div style="padding:8px 12px;">
+      <div style="display:flex;align-items:center;gap:4px;margin-bottom:8px;">${flag(m.t1,true)}<span style="font-size:13px;font-weight:700;">${m.t1}</span><span style="color:var(--text3);">vs</span><span style="font-size:13px;font-weight:700;">${m.t2}</span>${flag(m.t2,true)}${r?`<span class="bdg bg" style="margin-left:4px;">Résultat: ${r.s1}–${r.s2}</span>`:''}</div>
+      ${lk?`<div class="chips">${Object.keys(DB.users).map(p=>{
+        const pr=(DB.pronos[p]||{})[m.id];
+        const v=r?calcPts(pr,r):null;
+        const isMe=p===ME;
+        const bg=v===3?'#dcfce7':v===1?'#dbeafe':v===0?'#f3f4f6':isMe?'#eff6ff':'#fff';
+        const bc=v===3?'#86efac':v===1?'#93c5fd':v===0?'#e5e7eb':isMe?'#93c5fd':'#e5e7eb';
+        return`<div style="background:${bg};border:1.5px solid ${bc};border-radius:8px;padding:6px 10px;display:flex;justify-content:space-between;align-items:center;gap:6px;">
+          <span style="font-size:11px;font-weight:${isMe?800:600};max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.split(' ')[0]}${isMe?' ⭐':''}</span>
+          <span style="font-size:13px;font-weight:800;">${pr?pr.s1+'–'+pr.s2:'<span style="color:#ef4444;font-size:11px;">—</span>'}</span>
+          ${v!==null?ptsB(v):''}
+        </div>`;
+      }).join('')}</div>`
+      :`<div style="text-align:center;padding:10px;color:var(--text3);font-size:12px;">🔒 Pronos visibles après le coup d'envoi</div>`}
+    </div></div>`;
   });
   return h;
 }
