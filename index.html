@@ -185,8 +185,10 @@ async function dbLoad(){
 }
 async function dbSave(k){
   try{
-    await fetch(SB_URL+'/rest/v1/data',{method:'POST',headers:{'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({id:k,content:DB[k]})});
-  }catch(e){console.error('dbSave error',e);}
+    const r=await fetch(SB_URL+'/rest/v1/data',{method:'POST',headers:{'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({id:k,content:DB[k]})});
+    if(!r.ok){const err=await r.text();console.error('dbSave HTTP',r.status,err);return false;}
+    return true;
+  }catch(e){console.error('dbSave error',e);return false;}
 }
 
 function sessGet(){try{return localStorage.getItem(SK);}catch(e){return null;}}
@@ -329,7 +331,9 @@ async function doRegister(){
   if(p!==p2){showErr('er','Les mots de passe ne correspondent pas');return;}
   await dbLoad();
   if(DB.users[n]){showErr('er','Ce nom est déjà utilisé.');return;}
-  DB.users[n]={p,ts:Date.now()};await dbSave('users');
+  DB.users[n]={p,ts:Date.now()};
+  const ok=await dbSave('users');
+  if(!ok){delete DB.users[n];showErr('er','❌ Erreur de connexion à la base. Réessaie dans quelques secondes.');return;}
   ME=n;sessSave(n);showPlayer();
 }
 function doAdminLogin(){
