@@ -221,23 +221,15 @@ function hideErr(id){const e=document.getElementById(id);if(e)e.style.display='n
 function R(html){document.getElementById('root').innerHTML=html;}
 
 // Formate une date UTC en "Vendredi 11 juin"
-function parseLocalDate(k){
-  if(!k)return null;
-  // Parser manuellement pour éviter les problèmes de timezone
-  const m=k.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if(!m)return new Date(k);
-  return{y:+m[1],mo:+m[2]-1,d:+m[3]};
-}
 function fmtDay(k){
   if(!k)return'';
-  const p=parseLocalDate(k);
-  if(!p)return'';
-  const dt=new Date(p.y,p.mo,p.d);
+  // Convertir en heure française (UTC+2 en été)
+  const dt=new Date(new Date(k).getTime()+2*3600000);
   const jours=['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
   const mois=['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
-  return`${jours[dt.getDay()]} ${dt.getDate()} ${mois[dt.getMonth()]}`;
+  return`${jours[dt.getUTCDay()]} ${dt.getUTCDate()} ${mois[dt.getUTCMonth()]}`;
 }
-function dayKey(k){if(!k)return'';const p=parseLocalDate(k);if(!p)return k.slice(0,10);return`${p.y}-${p.mo}-${p.d}`;}
+function dayKey(k){if(!k)return'';const dt=new Date(new Date(k).getTime()+2*3600000);return`${dt.getUTCFullYear()}-${dt.getUTCMonth()}-${dt.getUTCDate()}`;}
 
 function updateStats(){
   const ms=allM();const mp=DB.pronos[ME]||{};
