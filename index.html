@@ -376,15 +376,17 @@ function showPlayer(){
       <button class="tb ${ptab==='s'?'on':''}" onclick="setPTab('s')">📊 Scores</button>
       <button class="tb ${ptab==='g'?'on':''}" onclick="setPTab('g')">👥 Groupe</button>
       <button class="tb ${ptab==='c'?'on':''}" onclick="setPTab('c')">🏆 Class.</button>
+      <button class="tb ${ptab==='r'?'on':''}" onclick="setPTab('r')">📋 Règles</button>
     </div>
     <div id="tp-p" class="tp ${ptab==='p'?'on':''}">${buildPronos()}</div>
     <div id="tp-s" class="tp ${ptab==='s'?'on':''}">${buildScores()}</div>
     <div id="tp-g" class="tp ${ptab==='g'?'on':''}">${buildGroupe()}</div>
     <div id="tp-c" class="tp ${ptab==='c'?'on':''}">${renderClass()}</div>
+    <div id="tp-r" class="tp ${ptab==='r'?'on':''}">${buildRegles()}</div>
   </div>`);
   startLive();
 }
-function setPTab(t){ptab=t;['p','s','g','c'].forEach((x,i)=>{document.querySelectorAll('.tb')[i].classList.toggle('on',x===t);document.getElementById('tp-'+x).classList.toggle('on',x===t);});if(t==='g')document.getElementById('tp-g').innerHTML=buildGroupe();}
+function setPTab(t){ptab=t;['p','s','g','c','r'].forEach((x,i)=>{document.querySelectorAll('.tb')[i].classList.toggle('on',x===t);document.getElementById('tp-'+x).classList.toggle('on',x===t);});if(t==='g')document.getElementById('tp-g').innerHTML=buildGroupe();}
 
 function buildPronos(){
   const ms=allM();const mp=DB.pronos[ME]||{};
@@ -460,6 +462,64 @@ function buildScores(){
   });
   return h;
 }
+
+function buildRegles(){return`
+<div style="padding:4px 0;">
+  <div style="background:var(--card);border:1px solid var(--brd);border-radius:var(--r);padding:16px;margin-bottom:12px;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+      <div style="width:36px;height:36px;border-radius:50%;background:#E6F1FB;display:flex;align-items:center;justify-content:center;flex-shrink:0;">🏆</div>
+      <div style="font-size:15px;font-weight:800;">Système de points</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:#EAF3DE;border-radius:8px;">
+        <span style="font-size:18px;font-weight:800;color:#3B6D11;min-width:32px;">+3</span>
+        <div><div style="font-size:13px;font-weight:700;color:#27500A;">Score exact</div><div style="font-size:11px;color:#3B6D11;">Tu trouves le score précis du match</div></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:#E6F1FB;border-radius:8px;">
+        <span style="font-size:18px;font-weight:800;color:#185FA5;min-width:32px;">+1</span>
+        <div><div style="font-size:13px;font-weight:700;color:#0C447C;">Bonne équipe gagnante</div><div style="font-size:11px;color:#185FA5;">Tu trouves le vainqueur ou le nul, mais pas le score exact</div></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--gray-l);border-radius:8px;">
+        <span style="font-size:18px;font-weight:800;color:var(--text3);min-width:32px;">0</span>
+        <div><div style="font-size:13px;font-weight:700;">Raté</div><div style="font-size:11px;color:var(--text3);">Mauvaise équipe gagnante pronostiquée</div></div>
+      </div>
+    </div>
+  </div>
+  <div style="background:var(--card);border:1px solid var(--brd);border-radius:var(--r);padding:16px;margin-bottom:12px;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+      <div style="width:36px;height:36px;border-radius:50%;background:#FAEEDA;display:flex;align-items:center;justify-content:center;flex-shrink:0;">⏱️</div>
+      <div style="font-size:15px;font-weight:800;">Résultats à 90 minutes</div>
+    </div>
+    <div style="font-size:13px;color:var(--text2);line-height:1.6;">Les pronostics sont évalués sur le score à la fin du <strong>temps réglementaire (90 min)</strong>. Les prolongations et les tirs au but ne sont pas pris en compte.</div>
+  </div>
+  <div style="background:var(--card);border:1px solid var(--brd);border-radius:var(--r);padding:16px;margin-bottom:12px;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+      <div style="width:36px;height:36px;border-radius:50%;background:#EEEDFE;display:flex;align-items:center;justify-content:center;flex-shrink:0;">🔒</div>
+      <div style="font-size:15px;font-weight:800;">Pronostics et confidentialité</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <div style="display:flex;gap:10px;align-items:flex-start;"><span style="font-size:14px;flex-shrink:0;">🔒</span><div style="font-size:13px;color:var(--text2);line-height:1.6;">Les pronostics sont <strong>automatiquement bloqués à l'heure du match</strong>. Impossible de modifier ou saisir un pronostic une fois le coup d'envoi donné.</div></div>
+      <div style="display:flex;gap:10px;align-items:flex-start;"><span style="font-size:14px;flex-shrink:0;">🙈</span><div style="font-size:13px;color:var(--text2);line-height:1.6;">Les pronostics des autres sont <strong>cachés avant le coup d'envoi</strong> de chaque match.</div></div>
+      <div style="display:flex;gap:10px;align-items:flex-start;"><span style="font-size:14px;flex-shrink:0;">👁️</span><div style="font-size:13px;color:var(--text2);line-height:1.6;">Ils deviennent visibles dès que le match commence.</div></div>
+    </div>
+  </div>
+  <div style="background:var(--card);border:1px solid var(--brd);border-radius:var(--r);padding:16px;margin-bottom:12px;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+      <div style="width:36px;height:36px;border-radius:50%;background:#FAECE7;display:flex;align-items:center;justify-content:center;flex-shrink:0;">🎯</div>
+      <div style="font-size:15px;font-weight:800;">Déroulement</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <div style="display:flex;gap:10px;align-items:flex-start;"><span style="font-size:14px;flex-shrink:0;">✅</span><div style="font-size:13px;color:var(--text2);line-height:1.6;">Le concours couvre toute la compétition : <strong>phase de groupes + phase finale</strong> (16es, 8es, quarts, demis, finale).</div></div>
+      <div style="display:flex;gap:10px;align-items:flex-start;"><span style="font-size:14px;flex-shrink:0;">✅</span><div style="font-size:13px;color:var(--text2);line-height:1.6;">Le <strong>classement est mis à jour en temps réel</strong> après chaque résultat.</div></div>
+      <div style="display:flex;gap:10px;align-items:flex-start;"><span style="font-size:14px;flex-shrink:0;">🎁</span><div style="font-size:13px;color:var(--text2);line-height:1.6;">Des <strong>lots sont à remporter pour les mieux classés</strong>. Les détails seront communiqués ultérieurement — restez connectés !</div></div>
+    </div>
+  </div>
+  <div style="background:#1e3a8a;border-radius:var(--r);padding:20px;text-align:center;">
+    <div style="font-size:28px;margin-bottom:6px;">⚽</div>
+    <div style="font-size:16px;font-weight:800;color:#fff;margin-bottom:4px;">Bonne chance à tous !</div>
+    <div style="font-size:13px;color:#93c5fd;">Que le meilleur gagne</div>
+  </div>
+</div>`;}
 
 function buildGroupe(){
   const ms=allM();
