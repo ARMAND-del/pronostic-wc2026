@@ -708,12 +708,21 @@ async function addM(){
 async function delM(id){if(!confirm('Supprimer ce match ?'))return;DB.extraMatchs=(DB.extraMatchs||[]).filter(m=>m.id!==id);for(const p in DB.pronos)if(DB.pronos[p])delete DB.pronos[p][id];delete DB.results[id];await dbSave('extraMatchs');await dbSave('pronos');await dbSave('results');document.getElementById('at-r').innerHTML=buildAR();}
 function editM(id){
   const m=DB.extraMatchs.find(x=>x.id===id);if(!m)return;
-  const newK=prompt('Nouveau coup d\'envoi (format: 2026-07-01T21:00)\nActuel: '+m.k,m.k);
-  if(!newK)return;
-  const newD=prompt('Nouvelle date affichée (ex: 01/07 21h)\nActuel: '+m.d,m.d);
-  if(newD===null)return;
-  m.k=newK;m.d=newD;
-  dbSave('extraMatchs').then(()=>{document.getElementById('at-r').innerHTML=buildAR();alert('✅ Match mis à jour !');});
+  // Afficher l'heure actuelle en heure France
+  const cur=m.k?new Date(m.k):null;
+  const curStr=cur?`${String(cur.getHours()).padStart(2,'0')}:${String(cur.getMinutes()).padStart(2,'0')}`:'';
+  const newH=prompt('Heure du match en heure française (ex: 19:00 ou 22:30)\nActuel: '+curStr,curStr);
+  if(!newH)return;
+  // Extraire la date du match actuel
+  const dateStr=m.k?m.k.slice(0,10):'';
+  const newDate=prompt('Date du match (format: 2026-06-29)\nActuel: '+dateStr,dateStr);
+  if(!newDate)return;
+  // Stocker directement en heure locale
+  m.k=newDate+'T'+newH;
+  // Mettre à jour la date affichée automatiquement
+  const parts=newDate.split('-');
+  m.d=parts[2]+'/'+parts[1]+' '+newH.replace(':','h').replace(/h00$/,'h');
+  dbSave('extraMatchs').then(()=>{document.getElementById('at-r').innerHTML=buildAR();alert('✅ Mis à jour !');});
 }
 async function saveR(mid){const s1=parseInt(document.getElementById('r1_'+mid).value),s2=parseInt(document.getElementById('r2_'+mid).value);if(isNaN(s1)||isNaN(s2))return;const prev=calcScores();prev.forEach((s,i)=>{DB.prevRanks[s.p]=i;});DB.results[mid]={s1,s2};await dbSave('results');await dbSave('prevRanks');document.getElementById('at-r').innerHTML=buildAR();}
 async function delR(mid){delete DB.results[mid];await dbSave('results');document.getElementById('at-r').innerHTML=buildAR();}
