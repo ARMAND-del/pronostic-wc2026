@@ -202,7 +202,7 @@ function sessSave(n){try{localStorage.setItem(SK,n);}catch(e){}}
 function sessClear(){try{localStorage.removeItem(SK);}catch(e){}}
 
 function ini(n){return(n||'').trim().split(' ').map(w=>w[0]||'').join('').toUpperCase().slice(0,2)||'?';}
-function lkd(m){return m.k&&Date.now()>=new Date(m.k).getTime();}
+function lkd(m){if(!m.k)return false;const t=m.k.endsWith('Z')?new Date(m.k).getTime():new Date(m.k).getTime()-2*3600000;return Date.now()>=t;}
 function soonStr(m){if(!m.k)return null;const d=new Date(m.k)-Date.now();if(d<=0||d>48*3600000)return null;const h=Math.floor(d/3600000),mn=Math.floor((d%3600000)/60000);return h>0?`⏰${h}h${mn?mn+'m':''}`:`⏰${mn}min`;}
 function calcPts(p,r){if(!p||r===undefined)return null;if(p.s1===r.s1&&p.s2===r.s2)return 3;const pw=p.s1>p.s2?1:(p.s1<p.s2?-1:0),rw=r.s1>r.s2?1:(r.s1<r.s2?-1:0);return pw===rw?1:0;}
 function calcScores(){
@@ -389,7 +389,11 @@ function showPlayer(){
 function setPTab(t){ptab=t;['p','s','g','c','r'].forEach((x,i)=>{document.querySelectorAll('.tb')[i].classList.toggle('on',x===t);document.getElementById('tp-'+x).classList.toggle('on',x===t);});if(t==='g')document.getElementById('tp-g').innerHTML=buildGroupe();}
 
 function buildPronos(){
-  const ms=allM();const mp=DB.pronos[ME]||{};
+  const allMs=allM();
+  const upcoming=allMs.filter(m=>!lkd(m));
+  const started=allMs.filter(m=>lkd(m)).reverse();
+  const ms=[...upcoming,...started];
+  const mp=DB.pronos[ME]||{};
   const pend=ms.filter(m=>!DB.results[m.id]);
   const done2=ms.filter(m=>DB.results[m.id]);
   if(!ms.length)return'<div style="text-align:center;padding:30px;color:var(--text3);">Aucun match disponible</div>';
@@ -522,7 +526,10 @@ function buildRegles(){return`
 </div>`;}
 
 function buildGroupe(){
-  const ms=allM();
+  const allMs=allM();
+  const upcoming=allMs.filter(m=>!lkd(m));
+  const started=allMs.filter(m=>lkd(m)).reverse();
+  const ms=[...upcoming,...started];
   const pl=Object.keys(DB.users).filter(p=>p!==ME);
   if(!pl.length)return'<div style="text-align:center;padding:30px;color:var(--text3);">Aucun autre participant encore</div>';
   let h=`<div style="font-size:15px;font-weight:800;margin-bottom:12px;">👥 Les participants (${Object.keys(DB.users).length})</div>`;
