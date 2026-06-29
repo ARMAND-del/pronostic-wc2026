@@ -223,13 +223,15 @@ function R(html){document.getElementById('root').innerHTML=html;}
 // Formate une date UTC en "Vendredi 11 juin"
 function fmtDay(k){
   if(!k)return'';
-  // Convertir en heure française (UTC+2 en été)
-  const dt=new Date(new Date(k).getTime()+2*3600000);
+  // UTC: ajouter 2h pour heure française. Local: lire directement
+  const ms=k.endsWith('Z')?new Date(k).getTime()+2*3600000:new Date(k).getTime();
+  const dt=new Date(ms);
   const jours=['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
   const mois=['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
-  return`${jours[dt.getUTCDay()]} ${dt.getUTCDate()} ${mois[dt.getUTCMonth()]}`;
+  const d=k.endsWith('Z')?new Date(ms):dt;
+  return k.endsWith('Z')?`${jours[d.getUTCDay()]} ${d.getUTCDate()} ${mois[d.getUTCMonth()]}`:`${jours[dt.getDay()]} ${dt.getDate()} ${mois[dt.getMonth()]}`;
 }
-function dayKey(k){if(!k)return'';const dt=new Date(new Date(k).getTime()+2*3600000);return`${dt.getUTCFullYear()}-${dt.getUTCMonth()}-${dt.getUTCDate()}`;}
+function dayKey(k){if(!k)return'';if(k.endsWith('Z')){const dt=new Date(new Date(k).getTime()+2*3600000);return`${dt.getUTCFullYear()}-${dt.getUTCMonth()}-${dt.getUTCDate()}`;}const dt=new Date(k);return`${dt.getFullYear()}-${dt.getMonth()}-${dt.getDate()}`;}
 
 function updateStats(){
   const ms=allM();const mp=DB.pronos[ME]||{};
@@ -451,7 +453,7 @@ function buildPronos(){
 
 function buildScores(){
   const ms=allM();const mp=DB.pronos[ME]||{};
-  const played=ms.filter(m=>DB.results[m.id]);
+  const played=ms.filter(m=>DB.results[m.id]).reverse();
   if(!played.length)return'<div style="text-align:center;padding:30px;color:var(--text3);">Aucun résultat officiel encore</div>';
   let h='',lastDay='';
   played.forEach(m=>{
