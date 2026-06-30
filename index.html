@@ -189,8 +189,21 @@ async function dbLoad(){
   if(!DB.extraMatchs)DB.extraMatchs=[];
   if(!DB.prevRanks)DB.prevRanks={};
 }
-async function dbSave(k){
+async function dbFetchOne(k){
   try{
+    const rows=await fetch(SB_URL+'/rest/v1/data?id=eq.'+k+'&select=content',{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}}).then(r=>r.json());
+    return(rows&&rows[0])?rows[0].content:null;
+  }catch(e){console.error('dbFetchOne error',e);return null;}
+}
+// dbSave avec merge optionnel : recharge la donnée fraîche depuis Supabase, applique mergeFn sur elle,
+// remet à jour DB[k] localement, puis sauvegarde. Évite d'écraser les modifs concurrentes d'autres utilisateurs.
+async function dbSave(k,mergeFn){
+  try{
+    if(mergeFn){
+      const fresh=await dbFetchOne(k);
+      if(fresh!==null)DB[k]=fresh;
+      mergeFn(DB[k]);
+    }
     const r=await fetch(SB_URL+'/rest/v1/data',{method:'POST',headers:{'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({id:k,content:DB[k]})});
     if(!r.ok){const err=await r.text();console.error('dbSave HTTP',r.status,err);return false;}
     return true;
@@ -265,9 +278,7 @@ function trigSave(mid){
     const s1=Math.max(0,Math.min(20,parseInt(i1.value))),s2=Math.max(0,Math.min(20,parseInt(i2.value)));
     if(isNaN(s1)||isNaN(s2))return;
     i1.value=s1;i2.value=s2;
-    if(!DB.pronos[ME])DB.pronos[ME]={};
-    DB.pronos[ME][mid]={s1,s2};
-    await dbSave('pronos');
+    await dbSave('pronos',pr=>{if(!pr[ME])pr[ME]={};pr[ME][mid]={s1,s2};});
     updateStats();
     const sv=document.getElementById('sv_'+mid);if(sv){sv.style.opacity='1';setTimeout(()=>{if(sv)sv.style.opacity='0';},1500);}
     const nb=Object.values(DB.pronos).filter(pv=>pv&&pv[mid]).length;
@@ -646,7 +657,7 @@ function buildAP(){
   pl.forEach(p=>{const done=Object.keys(DB.pronos[p]||{}).length,tot=allM().length;h+=`<div class="card" style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;margin-bottom:8px;"><div style="display:flex;align-items:center;gap:10px;"><div class="av">${ini(p)}</div><div><div style="font-size:14px;font-weight:600;">${p}</div><div style="font-size:11px;color:var(--text3);">${done}/${tot} pronostics</div><div class="pg" style="width:100px;margin-top:4px;"><div class="pf" style="width:${tot?Math.round(done/tot*100):0}%;"></div></div></div></div><button class="btn btn-sm btn-d" onclick="delUser('${p.replace(/'/g,"\\'")}')">✕</button></div>`;});
   return h;
 }
-async function delUser(n){if(!confirm('Supprimer '+n+' ?'))return;delete DB.users[n];delete DB.pronos[n];await dbSave('users');await dbSave('pronos');document.getElementById('at-p').innerHTML=buildAP();}
+async function delUser(n){if(!confirm('Supprimer '+n+' ?'))return;await dbSave('users',u=>{delete u[n];});await dbSave('pronos',p=>{delete p[n];});document.getElementById('at-p').innerHTML=buildAP();}
 
 function buildAPR(){
   const pl=Object.keys(DB.users);const ms=allM();
@@ -701,13 +712,12 @@ async function addM(){
   const g=document.getElementById('np').value,d=document.getElementById('nd').value.trim(),kl=document.getElementById('nk').value;
   if(!t1||!t2)return;
   let k=null;if(kl){k=kl;}
-  if(!DB.extraMatchs)DB.extraMatchs=[];
-  DB.extraMatchs.push({id:'X'+Date.now(),t1,t2,g,d,k});
-  await dbSave('extraMatchs');
+  const newMatch={id:'X'+Date.now(),t1,t2,g,d,k};
+  await dbSave('extraMatchs',em=>{em.push(newMatch);});
   document.getElementById('nt1').value='';document.getElementById('nt2').value='';document.getElementById('nd').value='';document.getElementById('nk').value='';
   document.getElementById('at-r').innerHTML=buildAR();
 }
-async function delM(id){if(!confirm('Supprimer ce match ?'))return;DB.extraMatchs=(DB.extraMatchs||[]).filter(m=>m.id!==id);for(const p in DB.pronos)if(DB.pronos[p])delete DB.pronos[p][id];delete DB.results[id];await dbSave('extraMatchs');await dbSave('pronos');await dbSave('results');document.getElementById('at-r').innerHTML=buildAR();}
+async function delM(id){if(!confirm('Supprimer ce match ?'))return;await dbSave('extraMatchs',em=>{const i=em.findIndex(m=>m.id===id);if(i>=0)em.splice(i,1);});await dbSave('pronos',p=>{for(const u in p)if(p[u])delete p[u][id];});await dbSave('results',r=>{delete r[id];});document.getElementById('at-r').innerHTML=buildAR();}
 function editM(id){
   const m=DB.extraMatchs.find(x=>x.id===id);if(!m)return;
   // Afficher l'heure actuelle en heure France
@@ -720,14 +730,13 @@ function editM(id){
   const newDate=prompt('Date du match (format: 2026-06-29)\nActuel: '+dateStr,dateStr);
   if(!newDate)return;
   // Stocker directement en heure locale
-  m.k=newDate+'T'+newH;
-  // Mettre à jour la date affichée automatiquement
+  const newK=newDate+'T'+newH;
   const parts=newDate.split('-');
-  m.d=parts[2]+'/'+parts[1]+' '+newH.replace(':','h').replace(/h00$/,'h');
-  dbSave('extraMatchs').then(()=>{document.getElementById('at-r').innerHTML=buildAR();alert('✅ Mis à jour !');});
+  const newD=parts[2]+'/'+parts[1]+' '+newH.replace(':','h').replace(/h00$/,'h');
+  dbSave('extraMatchs',em=>{const t=em.find(x=>x.id===id);if(t){t.k=newK;t.d=newD;}}).then(()=>{document.getElementById('at-r').innerHTML=buildAR();alert('✅ Mis à jour !');});
 }
-async function saveR(mid){const s1=parseInt(document.getElementById('r1_'+mid).value),s2=parseInt(document.getElementById('r2_'+mid).value);if(isNaN(s1)||isNaN(s2))return;const prev=calcScores();prev.forEach((s,i)=>{DB.prevRanks[s.p]=i;});DB.results[mid]={s1,s2};await dbSave('results');await dbSave('prevRanks');document.getElementById('at-r').innerHTML=buildAR();}
-async function delR(mid){delete DB.results[mid];await dbSave('results');document.getElementById('at-r').innerHTML=buildAR();}
+async function saveR(mid){const s1=parseInt(document.getElementById('r1_'+mid).value),s2=parseInt(document.getElementById('r2_'+mid).value);if(isNaN(s1)||isNaN(s2))return;const prev=calcScores();prev.forEach((s,i)=>{DB.prevRanks[s.p]=i;});await dbSave('results',res=>{res[mid]={s1,s2};});await dbSave('prevRanks',pr=>{Object.assign(pr,DB.prevRanks);});document.getElementById('at-r').innerHTML=buildAR();}
+async function delR(mid){await dbSave('results',r=>{delete r[mid];});document.getElementById('at-r').innerHTML=buildAR();}
 
 function buildAC(){
   const sc=calcScores();let h=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div style="font-size:15px;font-weight:800;">Classement (${sc.length})</div><button class="btn btn-sm btn-gray" onclick="exportCSV()">📥 CSV</button></div>`;
